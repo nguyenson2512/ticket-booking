@@ -1,0 +1,26 @@
+# FastAPI and related
+fastapi==0.110.2
+uvicorn[standard]==0.29.0
+
+# Pydantic
+pydantic==2.7.1
+
+# SQLAlchemy
+sqlalchemy==2.0.30
+asyncpg==0.29.0  # PostgreSQL driver for async SQLAlchemy
+
+# Redis
+redis==5.0.4
+
+# Monitoring
+prometheus-client==0.20.0
+opentelemetry-api==1.24.0
+opentelemetry-sdk==1.24.0
+opentelemetry-semantic-conventions==0.45b0
+opentelemetry-instrumentation-fastapi==0.45b0
+opentelemetry-instrumentation-redis==0.45b0
+opentelemetry-instrumentation-sqlalchemy==0.45b0
+opentelemetry-exporter-prometheus==0.45b0
+
+# Optional: Alembic for migrations
+alembic==1.13.1
