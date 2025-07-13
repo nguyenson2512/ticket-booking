@@ -31,7 +31,7 @@ def metrics():
 
 @app.get("/")
 def root():
-    return {"message": "Hello, FastAPI with Prometheus and OpenTelemetry!"}
+    return {"message": "Hello world, FastAPI with Prometheus and OpenTelemetry!"}
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL")
