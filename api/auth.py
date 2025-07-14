@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from daos.user import UserDAO
-from services.auth_service import hash_password, verify_password, create_access_token
+from services.auth_service import hash_password, verify_password, create_access_token, get_current_user
 from schemas.user import UserCreate, UserLogin, UserRead
 from models.user import User
 from core.config import settings
@@ -34,3 +34,9 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token(data={"sub": user.email})
     return {"access_token": token, "token_type": "bearer"}
+
+@router.get("/users", response_model=list[UserRead])
+def get_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    dao = UserDAO(db)
+    users = dao.get_multi(skip=skip, limit=limit)
+    return users
