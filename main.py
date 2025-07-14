@@ -13,8 +13,14 @@ from opentelemetry import trace
 import sqlalchemy as sa
 import redis.asyncio as redis
 import os
+from api import auth
+from models.user import Base
+from core.database import engine
 
 app = FastAPI()
+app.include_router(auth.router)
+
+Base.metadata.create_all(bind=engine)
 
 # Prometheus metrics
 REQUEST_COUNT = Counter('request_count', 'Total HTTP requests')
@@ -33,9 +39,6 @@ def metrics():
 def root():
     return {"message": "Hello world, FastAPI with Prometheus and OpenTelemetry!"}
 
-# Database setup
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = sa.create_engine(DATABASE_URL, echo=True, future=True)
 
 # Redis setup
 REDIS_URL = os.getenv("REDIS_URL")
