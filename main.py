@@ -13,12 +13,12 @@ from opentelemetry import trace
 import sqlalchemy as sa
 import redis.asyncio as redis
 import os
-from api import auth
-from models.user import Base
-from core.database import engine
+from api import auth, show
+from core.database import engine, Base
 
 app = FastAPI()
 app.include_router(auth.router)
+app.include_router(show.router)
 
 Base.metadata.create_all(bind=engine)
 
