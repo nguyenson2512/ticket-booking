@@ -37,7 +37,7 @@ def metrics():
 
 @app.get("/")
 def root():
-    return {"message": "Hello world, FastAPI with Prometheus and OpenTelemetry!"}
+    return {"message": "Hello world, FastAPI!"}
 
 
 # Redis setup
