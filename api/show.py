@@ -6,6 +6,7 @@ from schemas.show import ShowCreate, ShowDetailOut, ShowOut
 from daos.show import ShowDAO
 from core.database import get_db
 from fastapi import Query
+from core.redis import redis_client
 
 router = APIRouter()
 
@@ -45,11 +46,20 @@ def list_shows(
         "data": shows
     }
 
+# , response_model=ShowDetailOut
 
-@router.get("/shows/{show_id}", response_model=ShowDetailOut)
-def get_show_detail(show_id: int, db: Session = Depends(get_db)):
+
+@router.get("/shows/{show_id}")
+async def get_show_detail(show_id: int, db: Session = Depends(get_db)):
+    cached_item = await redis_client.get(f"item_{show_id}")
+
+    if cached_item:
+        print(cached_item)
+        return {"show_id": show_id, "cached": True, "data": cached_item.decode('utf-8')}
     show = db.query(Show).options(joinedload(Show.tickets)
                                   ).filter(Show.id == show_id).first()
     if not show:
         raise HTTPException(status_code=404, detail="Show not found")
-    return show
+    await redis_client.set(f"show_{show_id}", show)
+    return {"show_id": show_id, "cached": False, "data": show}
+    # return show
