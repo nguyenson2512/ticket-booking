@@ -1,8 +1,11 @@
+from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from schemas.show import ShowCreate, ShowOut
+from models.show import Show
+from sqlalchemy.orm import Session, joinedload
+from schemas.show import ShowCreate, ShowDetailOut, ShowOut
 from daos.show import ShowDAO
 from core.database import get_db
+from fastapi import Query
 
 router = APIRouter()
 
@@ -25,3 +28,28 @@ async def create_show(show_data: ShowCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Error creating show: {str(e)}")
+
+
+@router.get("/shows")
+def list_shows(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, gt=0),
+    db: Session = Depends(get_db)
+):
+    total_record = db.query(Show).count()
+    offset = (page - 1) * limit
+    shows = db.query(Show).offset(offset).limit(limit).all()
+    return {
+        "total_record": total_record,
+        "current_page": page,
+        "data": shows
+    }
+
+
+@router.get("/shows/{show_id}", response_model=ShowDetailOut)
+def get_show_detail(show_id: int, db: Session = Depends(get_db)):
+    show = db.query(Show).options(joinedload(Show.tickets)
+                                  ).filter(Show.id == show_id).first()
+    if not show:
+        raise HTTPException(status_code=404, detail="Show not found")
+    return show

@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field, condecimal
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+
+from schemas.ticket import TicketOut
 
 
 class TicketClassInput(BaseModel):
@@ -30,3 +32,7 @@ class ShowOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ShowDetailOut(ShowOut):
+    tickets: List[TicketOut]
