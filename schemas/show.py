@@ -1,15 +1,22 @@
 from pydantic import BaseModel, Field, condecimal
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
+
+class TicketClassInput(BaseModel):
+    ticket_class: str
+    price: float = Field(..., gt=0)
+    quantity: int = Field(..., ge=0)
+
 
 class ShowCreate(BaseModel):
     name: str
     location: str
     start_time: datetime
-    total_tickets: int = Field(..., gt=0)
     description: Optional[str] = None
     performer: Optional[str] = None
-    price: condecimal(gt=0)
+    ticket_classes: List[TicketClassInput]
+
 
 class ShowOut(BaseModel):
     id: int
