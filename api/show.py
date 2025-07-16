@@ -7,6 +7,7 @@ from daos.show import ShowDAO
 from core.database import get_db
 from fastapi import Query
 from core.redis import redis_client
+from core.elasticsearch import es_client
 
 router = APIRouter()
 

@@ -1,6 +1,7 @@
 import os
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     SECRET_KEY: str = "supersecret"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -8,5 +9,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     REDIS_URL: str = os.getenv("REDIS_URL", "")
+    ELASTICSEARCH_URL: str = os.getenv("ELASTICSEARCH_URL", "")
+
 
 settings = Settings()
