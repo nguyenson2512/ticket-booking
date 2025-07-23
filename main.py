@@ -15,8 +15,16 @@ import redis.asyncio as redis
 import os
 from api import auth, show
 from core.database import engine, Base
+from contextlib import asynccontextmanager
+from services.shows_consumer import start_consumer_thread
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_consumer_thread()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(show.router)
 
@@ -25,15 +33,18 @@ Base.metadata.create_all(bind=engine)
 # Prometheus metrics
 REQUEST_COUNT = Counter('request_count', 'Total HTTP requests')
 
+
 @app.middleware("http")
 async def prometheus_middleware(request: Request, call_next):
     REQUEST_COUNT.inc()
     response = await call_next(request)
     return response
 
+
 @app.get("/metrics")
 def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 @app.get("/")
 def root():
@@ -56,4 +67,5 @@ SQLAlchemyInstrumentor().instrument(engine=engine)
 
 # Prometheus metrics exporter
 metric_reader = PrometheusMetricReader()
-meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+meter_provider = MeterProvider(
+    resource=resource, metric_readers=[metric_reader])
