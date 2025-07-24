@@ -20,7 +20,6 @@ consumer = KafkaConsumer(
 
 
 def ensure_index():
-    print('++', es_client.ping())
     if not es_client.indices.exists(index='shows'):
         mapping = {
             "mappings": {
@@ -64,5 +63,3 @@ def consume_and_index():
 def start_consumer_thread():
     thread = threading.Thread(target=consume_and_index, daemon=True)
     thread.start()
-
-# Call start_consumer_thread() in your FastAPI app startup event
