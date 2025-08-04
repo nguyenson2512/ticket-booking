@@ -1,7 +1,9 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List
+from daos.ticket import TicketDAO
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.show import Show
+from schemas.ticket import TicketOut
 from sqlalchemy.orm import Session, joinedload
 from schemas.show import ShowCreate, ShowDetailOut, ShowOut
 from daos.show import ShowDAO
@@ -64,3 +66,19 @@ async def get_show_detail(show_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Show not found")
     await redis_client.set(f"show_{show_id}", ShowOut.model_validate(show).model_dump_json())
     return show
+
+@router.get("/shows/{show_id}/tickets", response_model=List[TicketOut])
+def get_tickets_by_show(
+    show_id: int,
+    db: Session = Depends(get_db)
+):
+    show = db.query(Show).filter(Show.id == show_id).first()
+    if not show:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Show not found"
+        )
+
+    tickets = TicketDAO(db).get_tickets_by_show_id(show_id)
+
+    return tickets
