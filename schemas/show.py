@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -30,9 +30,7 @@ class ShowOut(BaseModel):
     description: Optional[str]
     performer: Optional[str]
 
-    class Config:
-        orm_mode = True
-
+    model_config = ConfigDict(from_attributes=True)
 
 class ShowDetailOut(ShowOut):
     tickets: List[TicketOut]

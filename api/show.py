@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.show import Show
@@ -52,15 +53,14 @@ def list_shows(
 
 @router.get("/shows/{show_id}")
 async def get_show_detail(show_id: int, db: Session = Depends(get_db)):
-    cached_item = await redis_client.get(f"item_{show_id}")
+    cached_show = await redis_client.get(f"show_{show_id}")
 
-    if cached_item:
-        print(cached_item)
-        return {"show_id": show_id, "cached": True, "data": cached_item.decode('utf-8')}
-    show = db.query(Show).options(joinedload(Show.tickets)
-                                  ).filter(Show.id == show_id).first()
+    if cached_show:
+        data = json.loads(cached_show)
+        return data
+    show = db.query(Show).filter(Show.id == show_id).first()
+
     if not show:
         raise HTTPException(status_code=404, detail="Show not found")
-    await redis_client.set(f"show_{show_id}", show)
-    return {"show_id": show_id, "cached": False, "data": show}
-    # return show
+    await redis_client.set(f"show_{show_id}", ShowOut.model_validate(show).model_dump_json())
+    return show
