@@ -11,9 +11,14 @@ services:
       - ./:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
-      - db
-      - redis
-      - elasticsearch
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+      debezium:
+        condition: service_healthy
     networks:
       - backend
 
@@ -115,6 +120,11 @@ services:
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: false
       CONNECT_REST_ADVERTISED_HOST_NAME: debezium
       CONNECT_PLUGIN_PATH: /kafka/connect,/debezium-plugins
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://debezium:8083/connectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - backend
 

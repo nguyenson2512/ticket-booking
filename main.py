@@ -17,10 +17,57 @@ from api import auth, show
 from core.database import engine, Base
 from contextlib import asynccontextmanager
 from services.shows_consumer import start_consumer_thread
+import time
+import requests
+from kafka import KafkaProducer
 
+def wait_for_elasticsearch():
+    es_url = os.getenv("ELASTICSEARCH_URL", "http://elasticsearch:9200")
+    max_retries = 30
+    retry_interval = 2
+    
+    for i in range(max_retries):
+        try:
+            response = requests.get(f"{es_url}/_cluster/health", timeout=5)
+            if response.status_code == 200:
+                print("Elasticsearch is ready")
+                return True
+        except Exception as e:
+            print(f"Waiting for Elasticsearch... (attempt {i+1}/{max_retries})")
+            time.sleep(retry_interval)
+    
+    raise Exception("Elasticsearch failed to start within expected time")
+
+
+def wait_for_kafka():
+    kafka_bootstrap = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+    max_retries = 30
+    retry_interval = 2
+    
+    for i in range(max_retries):
+        try:
+            producer = KafkaProducer(
+                bootstrap_servers=kafka_bootstrap,
+                request_timeout_ms=5000
+            )
+            producer.close()
+            print("Kafka is ready")
+            return True
+        except Exception as e:
+            print(f"Waiting for Kafka... (attempt {i+1}/{max_retries})")
+            time.sleep(retry_interval)
+    
+    raise Exception("Kafka failed to start within expected time")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("Starting FastAPI application...")
+    
+    print("Checking dependencies...")
+    wait_for_elasticsearch()
+    wait_for_kafka()
+    
+    print("All dependencies are ready!")
     start_consumer_thread()
     yield
 
