@@ -6,11 +6,11 @@ import datetime
 from core.elasticsearch import es_client
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
-KAFKA_TOPIC_SHOWS = os.getenv("KAFKA_TOPIC_SHOWS", "pgserver.public.shows")
+SHOWS_TOPIC = os.getenv("SHOWS_TOPIC", "pgserver.public.shows")
 ELASTICSEARCH_SHOWS_INDEX = os.getenv("ELASTICSEARCH_SHOWS_INDEX", "shows")
 
 consumer = KafkaConsumer(
-    KAFKA_TOPIC_SHOWS,
+    SHOWS_TOPIC,
     bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
     value_deserializer=lambda m: json.loads(m.decode('utf-8')),
     auto_offset_reset='earliest',
