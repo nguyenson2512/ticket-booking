@@ -3,20 +3,36 @@ from typing import Any, Dict, List
 from daos.ticket import TicketDAO
 from fastapi import APIRouter, Depends, HTTPException, status
 from models.show import Show
+from models.user import User
 from schemas.ticket import TicketOut
 from sqlalchemy.orm import Session, joinedload
-from schemas.show import ShowCreate, ShowDetailOut, ShowOut
+from schemas.show import ShowCreate, ShowDetailOut, ShowOut, ShowUpdate
 from daos.show import ShowDAO
 from core.database import get_db
 from fastapi import Query
 from core.redis import redis_client
 from core.elasticsearch import es_client
+from services.auth_service import get_current_user
 
 router = APIRouter()
 
 
+def require_admin_role(current_user: User = Depends(get_current_user)):
+    """Dependency to require admin role"""
+    if not any(role.name == "admin" for role in current_user.roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can perform this action"
+        )
+    return current_user
+
+
 @router.post("/shows", response_model=ShowOut, status_code=status.HTTP_201_CREATED)
-async def create_show(show_data: ShowCreate, db: Session = Depends(get_db)):
+async def create_show(
+    show_data: ShowCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_role)
+):
     try:
         total_tickets = sum(
             ticket_class.quantity for ticket_class in show_data.ticket_classes)
@@ -33,6 +49,29 @@ async def create_show(show_data: ShowCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Error creating show: {str(e)}")
+
+
+@router.put("/shows/{show_id}", response_model=ShowOut)
+async def update_show(
+    show_id: int,
+    show_update: ShowUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_role)
+):
+    """Update a show (admin only)"""
+    dao = ShowDAO(db)
+    show = dao.update_show(show_id, show_update)
+    
+    if not show:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Show not found"
+        )
+    
+    # Clear cache for this show
+    await redis_client.delete(f"show_{show_id}")
+    
+    return show
 
 
 @router.get("/shows")

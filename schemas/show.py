@@ -20,6 +20,14 @@ class ShowCreate(BaseModel):
     ticket_classes: List[TicketClassInput]
 
 
+class ShowUpdate(BaseModel):
+    name: Optional[str] = None
+    location: Optional[str] = None
+    start_time: Optional[datetime] = None
+    description: Optional[str] = None
+    performer: Optional[str] = None
+
+
 class ShowOut(BaseModel):
     id: int
     name: str

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models.show import Show
 from models.ticket import Ticket, TicketStatus
+from schemas.show import ShowUpdate
 
 
 class ShowDAO:
@@ -32,6 +33,25 @@ class ShowDAO:
                 )
                 self.db.add(db_ticket)
 
+        self.db.commit()
+        self.db.refresh(show)
+        return show
+
+    def get_show_by_id(self, show_id: int):
+        """Get a show by its ID"""
+        return self.db.query(Show).filter(Show.id == show_id).first()
+
+    def update_show(self, show_id: int, show_update: ShowUpdate):
+        """Update a show with the provided data"""
+        show = self.get_show_by_id(show_id)
+        if not show:
+            return None
+        
+        # Update only the fields that are provided
+        update_data = show_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(show, field, value)
+        
         self.db.commit()
         self.db.refresh(show)
         return show
