@@ -14,7 +14,7 @@ import sqlalchemy as sa
 import redis.asyncio as redis
 import os
 from api import auth, show
-from core.database import engine, Base
+from core.database import engine, Base, seed_roles
 from contextlib import asynccontextmanager
 from services.shows_consumer import start_consumer_thread
 import time
@@ -68,6 +68,12 @@ async def lifespan(app: FastAPI):
     wait_for_kafka()
     
     print("All dependencies are ready!")
+
+    # Create database tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Seed roles table
+    seed_roles()
     start_consumer_thread()
     yield
 
@@ -75,7 +81,6 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(show.router)
 
-Base.metadata.create_all(bind=engine)
 
 # Prometheus metrics
 REQUEST_COUNT = Counter('request_count', 'Total HTTP requests')
