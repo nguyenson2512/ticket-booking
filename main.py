@@ -20,6 +20,7 @@ from services.shows_consumer import start_consumer_thread
 import time
 import asyncio
 from daos.booking import BookingDAO
+from services.booking_consumer import booking_consumer
 from core.database import SessionLocal
 import requests
 from kafka import KafkaProducer
@@ -95,6 +96,9 @@ async def lifespan(app: FastAPI):
 
     # Start background cleanup task
     asyncio.create_task(cleanup_expired_bookings_task())
+
+    # Start booking event consumer
+    asyncio.create_task(asyncio.to_thread(booking_consumer.start_consuming))
     yield
 
 app = FastAPI(lifespan=lifespan)

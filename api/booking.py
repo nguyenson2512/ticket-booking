@@ -70,6 +70,9 @@ async def create_booking(
                 detail="Failed to create booking"
             )
         
+        # Send Kafka event for booking creation
+        dao._send_booking_event("booking_created", booking, current_user)
+        
         return booking
         
     except HTTPException:

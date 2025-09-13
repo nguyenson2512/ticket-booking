@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import redis.asyncio as redis
 import json
 import os
+from services.booking_kafka import booking_producer
 
 class BookingDAO:
     def __init__(self, db: Session):
@@ -103,6 +104,37 @@ class BookingDAO:
         """Count total bookings for a user"""
         return self.db.query(Booking).filter(Booking.user_id == user_id).count()
 
+    def _prepare_booking_data(self, booking: Booking) -> dict:
+        """Prepare booking data for Kafka message"""
+        return {
+            "id": booking.id,
+            "user_id": booking.user_id,
+            "ticket_id": booking.ticket_id,
+            "status": booking.status.value,
+            "created_at": booking.created_at.isoformat() if booking.created_at else None,
+            "confirmed_at": booking.confirmed_at.isoformat() if booking.confirmed_at else None,
+            "cancelled_at": booking.cancelled_at.isoformat() if booking.cancelled_at else None,
+            "expires_at": booking.expires_at.isoformat() if booking.expires_at else None
+        }
+
+    def _prepare_user_data(self, user: User) -> dict:
+        """Prepare user data for Kafka message"""
+        return {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
+
+    def _send_booking_event(self, event_type: str, booking: Booking, user: User):
+        """Send booking event to Kafka"""
+        try:
+            booking_data = self._prepare_booking_data(booking)
+            user_data = self._prepare_user_data(user)
+            
+            booking_producer.send_booking_event(event_type, booking_data, user_data)
+        except Exception as e:
+            print(f"Failed to send booking event: {e}")
+
     async def confirm_booking(self, booking_id: int, user_id: int) -> Optional[Booking]:
         """Confirm a booking"""
         booking = self.get_booking_by_id(booking_id, user_id)
@@ -115,6 +147,9 @@ class BookingDAO:
             booking.status = BookingStatus.expired
             self.db.commit()
             return None
+        
+        # Get user data for Kafka message
+        user = self.db.query(User).filter(User.id == user_id).first()
         
         # Update ticket status to sold
         ticket = self.db.query(Ticket).filter(Ticket.id == booking.ticket_id).first()
@@ -129,6 +164,10 @@ class BookingDAO:
         self.db.commit()
         self.db.refresh(booking)
         
+        # Send Kafka event
+        if user:
+            self._send_booking_event("booking_confirmed", booking, user)
+        
         # Release the Redis lock
         await self.release_ticket_lock(booking.ticket_id)
         
@@ -141,12 +180,19 @@ class BookingDAO:
         if not booking or booking.status != BookingStatus.reserved:
             return None
         
+        # Get user data for Kafka message
+        user = self.db.query(User).filter(User.id == user_id).first()
+        
         # Update booking status
         booking.status = BookingStatus.cancelled
         booking.cancelled_at = datetime.utcnow()
         
         self.db.commit()
         self.db.refresh(booking)
+        
+        # Send Kafka event
+        if user:
+            self._send_booking_event("booking_cancelled", booking, user)
         
         # Release the Redis lock
         await self.release_ticket_lock(booking.ticket_id)
