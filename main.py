@@ -13,7 +13,7 @@ from opentelemetry import trace
 import sqlalchemy as sa
 import redis.asyncio as redis
 import os
-from api import auth, show
+from api import auth, show, ticket
 from core.database import engine, Base, seed_roles
 from contextlib import asynccontextmanager
 from services.shows_consumer import start_consumer_thread
@@ -80,6 +80,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(show.router)
+app.include_router(ticket.router)
 
 
 # Prometheus metrics
