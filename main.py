@@ -13,11 +13,14 @@ from opentelemetry import trace
 import sqlalchemy as sa
 import redis.asyncio as redis
 import os
-from api import auth, show, ticket
+from api import auth, show, ticket, booking
 from core.database import engine, Base, seed_roles
 from contextlib import asynccontextmanager
 from services.shows_consumer import start_consumer_thread
 import time
+import asyncio
+from daos.booking import BookingDAO
+from core.database import SessionLocal
 import requests
 from kafka import KafkaProducer
 
@@ -59,6 +62,20 @@ def wait_for_kafka():
     
     raise Exception("Kafka failed to start within expected time")
 
+async def cleanup_expired_bookings_task():
+    """Background task to clean up expired bookings every 5 minutes"""
+    while True:
+        try:
+            db = SessionLocal()
+            dao = BookingDAO(db)
+            await dao.cleanup_expired_bookings()
+            await dao.close_redis_connection()
+            db.close()
+        except Exception as e:
+            print(f"Error in cleanup task: {e}")
+        
+        # Wait 5 minutes before next cleanup
+        await asyncio.sleep(300)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting FastAPI application...")
@@ -75,12 +92,16 @@ async def lifespan(app: FastAPI):
     # Seed roles table
     seed_roles()
     start_consumer_thread()
+
+    # Start background cleanup task
+    asyncio.create_task(cleanup_expired_bookings_task())
     yield
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(show.router)
 app.include_router(ticket.router)
+app.include_router(booking.router)
 
 
 # Prometheus metrics
